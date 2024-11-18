@@ -28,4 +28,6 @@ public class MemberRepository {
                 + " join fetch m.area o", Member.class)
                 .getResultList();
     }
+
+
 }
