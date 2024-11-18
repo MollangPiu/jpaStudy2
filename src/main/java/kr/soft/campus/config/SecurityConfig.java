@@ -1,4 +1,3 @@
-import kr.soft.campus.filter.JwtRequestFilter;
 import kr.soft.campus.interceptor.UserInterceptor;
 import kr.soft.campus.util.JwtUtil;
 import org.springframework.context.annotation.Bean;
