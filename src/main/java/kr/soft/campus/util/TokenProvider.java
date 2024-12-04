@@ -16,9 +16,15 @@ import org.springframework.stereotype.Component;
 
 import java.security.Key;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Collection;
 import java.util.Date;
 import java.util.stream.Collectors;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+
+import javax.crypto.spec.SecretKeySpec;
 
 @Component
 public class TokenProvider implements InitializingBean {
@@ -29,6 +35,9 @@ public class TokenProvider implements InitializingBean {
 
     private final String secret;
     private final long tokenValidityInMilliseconds;
+
+    String secretKeyBase64 = "campus";
+    byte[] decodedKey = Base64.getDecoder().decode(secretKeyBase64);
 
     private Key key;
 
@@ -44,7 +53,8 @@ public class TokenProvider implements InitializingBean {
     @Override
     public void afterPropertiesSet() {
         byte[] keyBytes = Decoders.BASE64.decode(secret);
-        this.key = Keys.hmacShaKeyFor(keyBytes);
+        //this.key = Keys.hmacShaKeyFor(keyBytes);
+        this.key = new SecretKeySpec(decodedKey, 0, decodedKey.length, "HMACSHA256");
     }
 
     // Authentication 객체의 권한정보를 이용해서 토큰을 생성
@@ -57,19 +67,18 @@ public class TokenProvider implements InitializingBean {
         Date validity = new Date(now + this.tokenValidityInMilliseconds);
 
         return Jwts.builder()
-                .setSubject(authentication.getName())
-                .claim(AUTHORITIES_KEY, authorities)
-                .signWith(key, SignatureAlgorithm.HS512)
-                .setExpiration(validity)
+                .setSubject("user")
+                .signWith(SignatureAlgorithm.HS256, key)
                 .compact();
     }
 
     // Token에 담겨있는 정보를 이용해 Authentication 객체를 리턴
     public Authentication getAuthentication(String token) {
         Claims claims = Jwts
-                .parserBuilder()
+                .parser()
+                //.parserBuilder()
                 .setSigningKey(key)
-                .build()
+//                .build()
                 .parseClaimsJws(token)
                 .getBody();
 
@@ -86,7 +95,8 @@ public class TokenProvider implements InitializingBean {
     // 토큰의 유효성 검증, 토큰을 파싱하여 exception들을 캐치
     public boolean validateToken(String token) {
         try {
-            Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token);
+            //Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token);
+            Jwts.parser().setSigningKey(key).parseClaimsJws(token);
             return true;
         } catch (io.jsonwebtoken.security.SecurityException | MalformedJwtException e) {
             logger.info("잘못된 JWT 서명입니다.");
